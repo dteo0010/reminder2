@@ -17,8 +17,8 @@ export async function subscribeToPush(): Promise<{ success: boolean; message: st
     return { success: false, message: 'Notification permission was not granted.' }
   }
 
-  const registration = await navigator.serviceWorker.register('/sw.js')
-  await navigator.serviceWorker.ready
+  const registration = await navigator.serviceWorker.ready
+
 
   const subscription = await registration.pushManager.subscribe({
     userVisibleOnly: true,
