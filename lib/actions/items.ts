@@ -47,3 +47,43 @@ export async function addItem(formData: FormData) {
 
   redirect('/items')
 }
+
+export async function markAsRenewed(itemId: string, newDate: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { error: updateError } = await supabase
+    .from('items')
+    .update({ renewal_date: newDate, status: 'active' })
+    .eq('id', itemId)
+    .eq('user_id', user.id)
+
+  if (updateError) throw new Error(updateError.message)
+
+  // Clear the log so staged reminders restart fresh against the new date
+  const { error: deleteError } = await supabase
+    .from('notification_log')
+    .delete()
+    .eq('item_id', itemId)
+
+  if (deleteError) throw new Error(deleteError.message)
+
+  redirect('/items')
+}
+
+export async function deleteItem(itemId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { error } = await supabase
+    .from('items')
+    .delete()
+    .eq('id', itemId)
+    .eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  redirect('/items')
+}
