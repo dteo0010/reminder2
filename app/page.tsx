@@ -75,7 +75,6 @@ export default async function DashboardPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1>Coming up</h1>
-        <Link href="/items/new">+ Add item</Link>
       </div>
 
       {!hasAnyItems ? (
