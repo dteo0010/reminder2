@@ -58,10 +58,13 @@ async function sendEmail(userId: string, message: DigestMessage) {
   const email = userData?.user?.email
   if (!email) return
 
-  await resend.emails.send({
-    from: 'Renewal Reminder <onboarding@resend.dev>', // swap for your verified domain later
+  const { error } = await resend.emails.send({
+    from: 'Renewal Reminder <onboarding@resend.dev>',
     to: email,
     subject: message.title,
-    html: `<p>${message.body}</p><p><a href="https://your-app.vercel.app">Open Renewal Reminder</a> to see details.</p>`,
+    html: `<p>${message.body}</p><p><a href="https://reminder2-nu.vercel.app">Open Renewal Reminder</a> to see details.</p>`,
   })
+
+  if (error) console.error('Resend error:', error)
+  
 }
