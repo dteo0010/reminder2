@@ -48,12 +48,7 @@ function overdueStage(daysLeft: number): number {
   return -(weeksOverdue * 7) // 0, -7, -14, ... each week gets one notify
 }
 
-function advanceDate(dateStr: string, recurrence: string): string {
-  const date = new Date(dateStr)
-  if (recurrence === 'monthly') date.setMonth(date.getMonth() + 1)
-  else if (recurrence === 'annual') date.setFullYear(date.getFullYear() + 1)
-  return date.toISOString().split('T')[0]
-}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -64,14 +59,14 @@ export async function GET(request: Request) {
   const { data: rules } = await supabase.from('category_rules').select('*')
   const ruleMap = new Map<string, CategoryRule>(rules!.map(r => [r.category, r]))
 
-  const dueByUser = new Map<string, { item: Item; daysLeft: number; matchedStage: number }[]>()
+  const dueByUser = new Map<string, { item: Item; daysLeft: number; matchedStage: number; effectiveImportance: string }[]>()  
 
   for (const item of (items as Item[])) {
-    const rule = ruleMap.get(item.category)!
-    const leadDays = item.lead_days ?? rule.default_lead_days
-    const importance = item.importance ?? rule.default_importance
-    const stages = effectiveStages(leadDays, importance)
-    const daysLeft = daysUntil(item.renewal_date)
+  const rule = ruleMap.get(item.category)!
+  const leadDays = item.lead_days ?? rule.default_lead_days
+  const effectiveImportance = item.importance ?? rule.default_importance
+  const stages = effectiveStages(leadDays, effectiveImportance)
+  const daysLeft = daysUntil(item.renewal_date)
 
     const { data: loggedStages } = await supabase
       .from('notification_log')
@@ -91,14 +86,14 @@ export async function GET(request: Request) {
       matchedStage = candidates.find((s) => !loggedSet.has(s))
     }
 
-    if (matchedStage === undefined) continue
+      if (matchedStage === undefined) continue
 
-    if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])
-    dueByUser.get(item.user_id)!.push({ item, daysLeft, matchedStage })
-  }
+      if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])
+      dueByUser.get(item.user_id)!.push({ item, daysLeft, matchedStage, effectiveImportance })
+    }
 
-  for (const [userId, entries] of dueByUser) {
-    const hasUrgent = entries.some((e) => e.matchedStage <= 0 || e.item.importance === 'high')
+    for (const [userId, entries] of dueByUser) {
+    const hasUrgent = entries.some((e) => e.matchedStage <= 0 || e.effectiveImportance === 'high')
 
     if (!hasUrgent) {
       const { data: recent } = await supabase
