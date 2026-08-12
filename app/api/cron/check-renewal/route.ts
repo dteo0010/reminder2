@@ -48,6 +48,12 @@ function overdueStage(daysLeft: number): number {
   return -(weeksOverdue * 7) // 0, -7, -14, ... each week gets one notify
 }
 
+function advanceDate(dateStr: string, recurrence: string): string {
+  const date = new Date(dateStr)
+  if (recurrence === 'monthly') date.setMonth(date.getMonth() + 1)
+  else if (recurrence === 'annual') date.setFullYear(date.getFullYear() + 1)
+  return date.toISOString().split('T')[0]
+}
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -75,7 +81,9 @@ export async function GET(request: Request) {
 
     let matchedStage: number | undefined
 
-    if (item.reminder_type === 'expiry' && daysLeft < 0) {
+    // Widened from expiry-only to any overdue item — a subscription that's
+    // passed its date without being renewed deserves the same weekly nudge.
+    if (daysLeft < 0) {
       const stage = overdueStage(daysLeft)
       if (!loggedSet.has(stage)) matchedStage = stage
     } else {
