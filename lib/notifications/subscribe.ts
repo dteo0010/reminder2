@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
+import { clearStaleSubscription } from '@/lib/actions/push'
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -29,6 +30,8 @@ export async function subscribeToPush(): Promise<{ success: boolean; message: st
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { success: false, message: 'You must be logged in.' }
+
+  await clearStaleSubscription(subJson.endpoint!)
 
   const { error } = await supabase.from('push_subscriptions').upsert(
     {
