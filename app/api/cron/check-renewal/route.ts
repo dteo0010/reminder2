@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { sendDigest } from '@/lib/notifications/send'
+import { daysUntil } from '@/lib/utils/dates'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,13 +26,6 @@ type CategoryRule = {
   default_importance: 'low' | 'normal' | 'high'
 }
 
-function daysUntil(dateStr: string): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const target = new Date(dateStr)
-  target.setHours(0, 0, 0, 0)
-  return Math.round((target.getTime() - today.getTime()) / 86400000)
-}
 
 // Importance prunes which lead-time stages actually fire —
 // this is what keeps low-stakes items from generating extra noise.
