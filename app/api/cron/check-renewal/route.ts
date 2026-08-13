@@ -59,14 +59,14 @@ export async function GET(request: Request) {
   const { data: rules } = await supabase.from('category_rules').select('*')
   const ruleMap = new Map<string, CategoryRule>(rules!.map(r => [r.category, r]))
 
-  const dueByUser = new Map<string, { item: Item; daysLeft: number; matchedStage: number; effectiveImportance: string }[]>()  
+  const dueByUser = new Map<string, { item: Item; daysLeft: number; matchedStage: number; effectiveImportance: string }[]>()
 
   for (const item of (items as Item[])) {
-  const rule = ruleMap.get(item.category)!
-  const leadDays = item.lead_days ?? rule.default_lead_days
-  const effectiveImportance = item.importance ?? rule.default_importance
-  const stages = effectiveStages(leadDays, effectiveImportance)
-  const daysLeft = daysUntil(item.renewal_date)
+    const rule = ruleMap.get(item.category)!
+    const leadDays = item.lead_days ?? rule.default_lead_days
+    const effectiveImportance = item.importance ?? rule.default_importance
+    const stages = effectiveStages(leadDays, effectiveImportance)
+    const daysLeft = daysUntil(item.renewal_date)
 
     const { data: loggedStages } = await supabase
       .from('notification_log')
@@ -76,8 +76,6 @@ export async function GET(request: Request) {
 
     let matchedStage: number | undefined
 
-    // Widened from expiry-only to any overdue item — a subscription that's
-    // passed its date without being renewed deserves the same weekly nudge.
     if (daysLeft < 0) {
       const stage = overdueStage(daysLeft)
       if (!loggedSet.has(stage)) matchedStage = stage
@@ -86,13 +84,17 @@ export async function GET(request: Request) {
       matchedStage = candidates.find((s) => !loggedSet.has(s))
     }
 
-      if (matchedStage === undefined) continue
+    if (matchedStage === undefined) continue
 
-      if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])
-      dueByUser.get(item.user_id)!.push({ item, daysLeft, matchedStage, effectiveImportance })
-    }
+    if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])
+    dueByUser.get(item.user_id)!.push({ item, daysLeft, matchedStage, effectiveImportance })
+  }
 
-    for (const [userId, entries] of dueByUser) {
+  let sentCount = 0
+  let deferredCount = 0
+  let failedCount = 0
+
+  for (const [userId, entries] of dueByUser) {
     const hasUrgent = entries.some((e) => e.matchedStage <= 0 || e.effectiveImportance === 'high')
 
     if (!hasUrgent) {
@@ -105,18 +107,35 @@ export async function GET(request: Request) {
 
       const lastSent = recent?.[0]?.sent_at ? new Date(recent[0].sent_at).getTime() : 0
       const hoursSinceLast = (Date.now() - lastSent) / 3600000
-      if (hoursSinceLast < 24) continue
+      if (hoursSinceLast < 24) {
+        deferredCount++
+        continue
+      }
     }
 
-    await supabase.from('notification_log').insert(
-      entries.map((e) => ({ item_id: e.item.id, stage: e.matchedStage, channel: 'digest' }))
-    )
-
     const message = buildDigestMessage(entries)
-    await sendDigest(userId, message)
+    const { pushSuccess, emailSuccess } = await sendDigest(userId, message)
+
+    // Only mark stages as sent if delivery actually succeeded on at least one channel —
+    // a failed send now gets retried next run instead of being silently lost forever.
+    if (pushSuccess || emailSuccess) {
+      await supabase.from('notification_log').upsert(
+        entries.map((e) => ({ item_id: e.item.id, stage: e.matchedStage, channel: 'digest' })),
+        { onConflict: 'item_id,stage', ignoreDuplicates: true }
+      )
+      sentCount++
+    } else {
+      failedCount++
+    }
   }
 
-  return NextResponse.json({ checked: items?.length ?? 0, notified: dueByUser.size })
+  return NextResponse.json({
+    checked: items?.length ?? 0,
+    matched: dueByUser.size,
+    sent: sentCount,
+    deferred: deferredCount,
+    failed: failedCount,
+  })
 }
 
 function buildDigestMessage(entries: { item: Item; daysLeft: number; matchedStage: number }[]) {
