@@ -11,8 +11,11 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
 
   return (
     <div>
-      <h1>Edit item</h1>
-      <EditItemForm item={item} />
+      <p className="eyebrow mb-1">Editing</p>
+      <h1 className="text-2xl text-text mb-8">{item.name}</h1>
+      <div className="card p-6 max-w-lg">
+        <EditItemForm item={item} />
+      </div>
     </div>
   )
 }

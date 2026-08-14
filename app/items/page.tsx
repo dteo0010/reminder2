@@ -2,6 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { daysUntil, formatDaysLeft } from '@/lib/utils/dates'
 
+const CATEGORY_LABELS: Record<string, string> = {
+  passport: 'Passport',
+  licence: 'Licence',
+  insurance: 'Insurance',
+  road_tax: 'Road tax',
+  subscription: 'Subscription',
+}
+
 export default async function ItemsPage() {
   const supabase = await createClient()
 
@@ -11,39 +19,46 @@ export default async function ItemsPage() {
     .order('renewal_date', { ascending: true })
 
   if (error) {
-    return <p>Error loading items: {error.message}</p>
+    return <p className="text-urgent">Error loading items: {error.message}</p>
   }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>All items</h1>
-        <Link href="/items/new">+ Add item</Link>
+      <div className="mb-8">
+        <p className="eyebrow mb-1">Everything tracked</p>
+        <h1 className="text-2xl text-text">All items</h1>
       </div>
 
       {(!items || items.length === 0) ? (
-        <p>No items yet. Add your first renewal to get started.</p>
+        <div className="card p-8 text-center">
+          <p className="text-text-muted mb-4">No items yet.</p>
+          <Link href="/items/new" className="btn btn-primary inline-flex">Add your first renewal</Link>
+        </div>
       ) : (
-        <ul>
+        <div className="card px-5">
           {items.map((item) => {
             const daysLeft = daysUntil(item.renewal_date)
             return (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <span> · {item.category}</span>
-                  {item.importance === 'high' && <span> · High priority</span>}
+              <Link
+                key={item.id}
+                href={`/items/${item.id}`}
+                className="flex items-center justify-between gap-4 py-4 border-b border-line last:border-0 group"
+              >
+                <div className="min-w-0">
+                  <p className="text-text truncate group-hover:text-accent transition-colors">{item.name}</p>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {CATEGORY_LABELS[item.category] ?? item.category}
+                    {item.importance === 'high' && <span className="text-urgent"> · high priority</span>}
+                  </p>
                 </div>
-                <div>
-                  {new Date(item.renewal_date).toLocaleDateString()}
-                  {' · '}
-                  {formatDaysLeft(daysLeft, item.reminder_type)}
+                <div className="text-right shrink-0">
+                  <p className="text-sm text-text font-display">{new Date(item.renewal_date).toLocaleDateString()}</p>
+                  <p className="text-xs text-text-muted">{formatDaysLeft(daysLeft, item.reminder_type)}</p>
                 </div>
-                <Link href={`/items/${item.id}`}>View / Edit</Link>
-              </li>
+              </Link>
             )
           })}
-        </ul>
+        </div>
       )}
     </div>
   )

@@ -7,16 +7,19 @@ export function RenewForm({ itemId, currentDate }: { itemId: string; currentDate
   const [date, setDate] = useState(currentDate)
 
   return (
-    <form action={() => markAsRenewed(itemId, date)}>
-      <label htmlFor="new_date">Mark as renewed — new date:</label>
-      <input
-        id="new_date"
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        required
-      />
-      <button type="submit">Confirm renewal</button>
+    <form action={() => markAsRenewed(itemId, date)} className="flex items-end gap-3 flex-wrap">
+      <div className="flex-1 min-w-[160px]">
+        <label htmlFor="new_date" className="field-label">New date</label>
+        <input
+          id="new_date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          required
+          className="field"
+        />
+      </div>
+      <button type="submit" className="btn btn-primary">Confirm renewal</button>
     </form>
   )
 }

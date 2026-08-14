@@ -6,6 +6,14 @@ import { formatStageLabel } from '@/lib/utils/notifications'
 import { RenewForm } from '@/components/RenewForm'
 import { DeleteButton } from '@/components/DeleteButton'
 
+const CATEGORY_LABELS: Record<string, string> = {
+  passport: 'Passport',
+  licence: 'Licence',
+  insurance: 'Insurance',
+  road_tax: 'Road tax',
+  subscription: 'Subscription',
+}
+
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -20,37 +28,52 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     .order('sent_at', { ascending: false })
 
   const daysLeft = daysUntil(item.renewal_date)
+  const colorClass = daysLeft < 0 ? 'text-urgent' : daysLeft <= 7 ? 'text-soon' : daysLeft <= 30 ? 'text-upcoming' : 'text-later'
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>{item.name}</h1>
-        <Link href={`/items/${item.id}/edit`}>Edit</Link>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <p className="eyebrow mb-1">{CATEGORY_LABELS[item.category] ?? item.category}</p>
+          <h1 className="text-2xl text-text">{item.name}</h1>
+        </div>
+        <Link href={`/items/${item.id}/edit`} className="btn">Edit</Link>
       </div>
 
-      <p>Category: {item.category}</p>
-      <p>Type: {item.reminder_type === 'expiry' ? 'Expires on' : 'Renews on'} {new Date(item.renewal_date).toLocaleDateString()}</p>
-      <p>{formatDaysLeft(daysLeft, item.reminder_type)}</p>
-      {item.importance && <p>Importance: {item.importance}</p>}
-      {item.recurrence && item.recurrence !== 'none' && <p>Recurs: {item.recurrence}</p>}
+      <div className="card p-6 mb-6 flex items-center gap-6">
+        <span className={`digit text-5xl ${colorClass}`}>{Math.abs(daysLeft)}</span>
+        <div>
+          <p className="text-text">{formatDaysLeft(daysLeft, item.reminder_type)}</p>
+          <p className="text-xs text-text-muted mt-1 font-display">
+            {item.reminder_type === 'expiry' ? 'Expires' : 'Renews'} {new Date(item.renewal_date).toLocaleDateString()}
+          </p>
+          {item.importance && <p className="text-xs text-text-muted mt-1">Importance: {item.importance}</p>}
+          {item.recurrence && item.recurrence !== 'none' && <p className="text-xs text-text-muted">Recurs: {item.recurrence}</p>}
+        </div>
+      </div>
 
-      <RenewForm itemId={item.id} currentDate={item.renewal_date} />
-      <DeleteButton itemId={item.id} />
+      <div className="card p-6 mb-6">
+        <p className="eyebrow mb-4">Mark as renewed</p>
+        <RenewForm itemId={item.id} currentDate={item.renewal_date} />
+      </div>
 
-      <section>
-        <h2>Notification history</h2>
+      <section className="mb-8">
+        <p className="eyebrow mb-3">Notification history</p>
         {(!history || history.length === 0) ? (
-          <p>No reminders sent yet for this cycle.</p>
+          <p className="text-sm text-text-muted">No reminders sent yet for this cycle.</p>
         ) : (
-          <ul>
+          <div className="card px-5">
             {history.map((h, i) => (
-              <li key={i}>
-                {formatStageLabel(h.stage)} — {new Date(h.sent_at).toLocaleDateString()} at {new Date(h.sent_at).toLocaleTimeString()}
-              </li>
+              <div key={i} className="py-3 border-b border-line last:border-0 flex justify-between text-sm">
+                <span className="text-text-muted">{formatStageLabel(h.stage)}</span>
+                <span className="text-text-muted font-display text-xs">{new Date(h.sent_at).toLocaleDateString()}</span>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </section>
+
+      <DeleteButton itemId={item.id} />
     </div>
   )
 }

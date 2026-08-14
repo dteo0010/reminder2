@@ -12,6 +12,21 @@ type Item = {
   importance: string | null
 }
 
+const CATEGORY_LABELS: Record<string, string> = {
+  passport: 'Passport',
+  licence: 'Licence',
+  insurance: 'Insurance',
+  road_tax: 'Road tax',
+  subscription: 'Subscription',
+}
+
+const TIER_COLOR: Record<string, string> = {
+  overdue: 'text-urgent',
+  thisWeek: 'text-soon',
+  thisMonth: 'text-upcoming',
+  later: 'text-later',
+}
+
 function groupByUrgency(items: Item[]) {
   const overdue: Item[] = []
   const thisWeek: Item[] = []
@@ -29,28 +44,41 @@ function groupByUrgency(items: Item[]) {
   return { overdue, thisWeek, thisMonth, later }
 }
 
-function ItemRow({ item }: { item: Item }) {
+function ItemRow({ item, tier }: { item: Item; tier: string }) {
   const daysLeft = daysUntil(item.renewal_date)
+  const colorClass = TIER_COLOR[tier]
+
   return (
-    <li>
-      <Link href={`/items/${item.id}`}>
-        <strong>{item.name}</strong>
-        <span> · {item.category}</span>
-        {item.importance === 'high' && <span> · High priority</span>}
-      </Link>
-      <div>{formatDaysLeft(daysLeft, item.reminder_type)}</div>
-    </li>
+    <Link
+      href={`/items/${item.id}`}
+      className="flex items-center justify-between gap-4 py-4 border-b border-line last:border-0 group"
+    >
+      <div className="flex items-center gap-4 min-w-0">
+        <span className={`digit text-2xl w-14 shrink-0 ${colorClass}`}>{Math.abs(daysLeft)}</span>
+        <div className="min-w-0">
+          <p className="text-text truncate group-hover:text-accent transition-colors">{item.name}</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            {CATEGORY_LABELS[item.category] ?? item.category}
+            {item.importance === 'high' && <span className="text-urgent"> · high priority</span>}
+          </p>
+        </div>
+      </div>
+      <span className="text-xs text-text-muted font-display shrink-0">{formatDaysLeft(daysLeft, item.reminder_type)}</span>
+    </Link>
   )
 }
 
-function Tier({ title, items }: { title: string; items: Item[] }) {
+function Tier({ title, items, tierKey }: { title: string; items: Item[]; tierKey: string }) {
   if (items.length === 0) return null
   return (
-    <section>
-      <h2>{title} ({items.length})</h2>
-      <ul>
-        {items.map((item) => <ItemRow key={item.id} item={item} />)}
-      </ul>
+    <section className="mb-8">
+      <div className="flex items-baseline gap-2 mb-1">
+        <h2 className="eyebrow">{title}</h2>
+        <span className="text-xs text-text-muted font-display">{items.length}</span>
+      </div>
+      <div className="card px-5">
+        {items.map((item) => <ItemRow key={item.id} item={item} tier={tierKey} />)}
+      </div>
     </section>
   )
 }
@@ -65,7 +93,7 @@ export default async function DashboardPage() {
     .order('renewal_date', { ascending: true })
 
   if (error) {
-    return <p>Error loading dashboard: {error.message}</p>
+    return <p className="text-urgent">Error loading dashboard: {error.message}</p>
   }
 
   const { overdue, thisWeek, thisMonth, later } = groupByUrgency(items ?? [])
@@ -73,24 +101,28 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Coming up</h1>
+      <div className="mb-8">
+        <p className="eyebrow mb-1">Dashboard</p>
+        <h1 className="text-2xl text-text">Coming up</h1>
       </div>
 
       {!hasAnyItems ? (
-        <p>No items yet. <Link href="/items/new">Add your first renewal</Link> to get started.</p>
+        <div className="card p-8 text-center">
+          <p className="text-text-muted mb-4">Nothing tracked yet.</p>
+          <Link href="/items/new" className="btn btn-primary inline-flex">Add your first renewal</Link>
+        </div>
       ) : (
         <>
-          <Tier title="Overdue" items={overdue} />
-          <Tier title="This week" items={thisWeek} />
-          <Tier title="This month" items={thisMonth} />
-          <Tier title="Later" items={later} />
+          <Tier title="Overdue" items={overdue} tierKey="overdue" />
+          <Tier title="This week" items={thisWeek} tierKey="thisWeek" />
+          <Tier title="This month" items={thisMonth} tierKey="thisMonth" />
+          <Tier title="Later" items={later} tierKey="later" />
         </>
       )}
 
-      <Link href="/items">View all items</Link>
-
-      <EnableNotifications />
+      <div className="mt-10 pt-6 border-t border-line">
+        <EnableNotifications />
+      </div>
     </div>
   )
 }

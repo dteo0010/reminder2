@@ -10,7 +10,7 @@ export function DeleteButton({ itemId }: { itemId: string }) {
         if (!confirm('Delete this item permanently?')) e.preventDefault()
       }}
     >
-      <button type="submit">Delete</button>
+      <button type="submit" className="btn btn-danger">Delete item</button>
     </form>
   )
 }

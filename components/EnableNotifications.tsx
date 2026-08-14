@@ -15,11 +15,11 @@ export function EnableNotifications() {
   }
 
   return (
-    <div>
-      <button onClick={handleClick} disabled={loading}>
-        {loading ? 'Enabling...' : 'Enable notifications'}
+    <div className="flex items-center gap-3">
+      <button onClick={handleClick} disabled={loading} className="btn">
+        {loading ? 'Enabling…' : 'Enable push notifications'}
       </button>
-      {status && <p>{status}</p>}
+      {status && <p className="text-xs text-text-muted">{status}</p>}
     </div>
   )
 }
