@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { daysUntil, formatDaysLeft } from '@/lib/utils/dates'
+import { daysUntil } from '@/lib/utils/dates'
+import { CountdownDigit, getTier, Tier as TierKey } from '@/components/CountdownDigit'
 import { EnableNotifications } from '@/components/EnableNotifications'
 
 type Item = {
@@ -20,33 +21,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   subscription: 'Subscription',
 }
 
-const TIER_COLOR: Record<string, string> = {
-  overdue: 'text-urgent',
-  thisWeek: 'text-soon',
-  thisMonth: 'text-upcoming',
-  later: 'text-later',
-}
-
 function groupByUrgency(items: Item[]) {
-  const overdue: Item[] = []
-  const thisWeek: Item[] = []
-  const thisMonth: Item[] = []
-  const later: Item[] = []
-
+  const groups: Record<TierKey, Item[]> = { overdue: [], thisWeek: [], thisMonth: [], later: [] }
   for (const item of items) {
-    const daysLeft = daysUntil(item.renewal_date)
-    if (daysLeft < 0) overdue.push(item)
-    else if (daysLeft <= 7) thisWeek.push(item)
-    else if (daysLeft <= 30) thisMonth.push(item)
-    else later.push(item)
+    groups[getTier(daysUntil(item.renewal_date))].push(item)
   }
-
-  return { overdue, thisWeek, thisMonth, later }
+  return groups
 }
 
-function ItemRow({ item, tier }: { item: Item; tier: string }) {
+function ItemRow({ item }: { item: Item }) {
   const daysLeft = daysUntil(item.renewal_date)
-  const colorClass = TIER_COLOR[tier]
 
   return (
     <Link
@@ -54,7 +38,9 @@ function ItemRow({ item, tier }: { item: Item; tier: string }) {
       className="flex items-center justify-between gap-4 py-4 border-b border-line last:border-0 group"
     >
       <div className="flex items-center gap-4 min-w-0">
-        <span className={`digit text-2xl w-14 shrink-0 ${colorClass}`}>{Math.abs(daysLeft)}</span>
+        <div className="w-16 shrink-0 flex justify-center">
+          <CountdownDigit daysLeft={daysLeft} size="md" />
+        </div>
         <div className="min-w-0">
           <p className="text-text truncate group-hover:text-accent transition-colors">{item.name}</p>
           <p className="text-xs text-text-muted mt-0.5">
@@ -63,12 +49,14 @@ function ItemRow({ item, tier }: { item: Item; tier: string }) {
           </p>
         </div>
       </div>
-      <span className="text-xs text-text-muted font-display shrink-0">{formatDaysLeft(daysLeft, item.reminder_type)}</span>
+      <span className="text-xs text-text-muted font-display shrink-0">
+        {new Date(item.renewal_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+      </span>
     </Link>
   )
 }
 
-function Tier({ title, items, tierKey }: { title: string; items: Item[]; tierKey: string }) {
+function Section({ title, items }: { title: string; items: Item[] }) {
   if (items.length === 0) return null
   return (
     <section className="mb-8">
@@ -77,7 +65,7 @@ function Tier({ title, items, tierKey }: { title: string; items: Item[]; tierKey
         <span className="text-xs text-text-muted font-display">{items.length}</span>
       </div>
       <div className="card px-5">
-        {items.map((item) => <ItemRow key={item.id} item={item} tier={tierKey} />)}
+        {items.map((item) => <ItemRow key={item.id} item={item} />)}
       </div>
     </section>
   )
@@ -113,10 +101,10 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <>
-          <Tier title="Overdue" items={overdue} tierKey="overdue" />
-          <Tier title="This week" items={thisWeek} tierKey="thisWeek" />
-          <Tier title="This month" items={thisMonth} tierKey="thisMonth" />
-          <Tier title="Later" items={later} tierKey="later" />
+          <Section title="Overdue" items={overdue} />
+          <Section title="This week" items={thisWeek} />
+          <Section title="This month" items={thisMonth} />
+          <Section title="Later" items={later} />
         </>
       )}
 

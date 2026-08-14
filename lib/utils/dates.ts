@@ -18,9 +18,7 @@ export function daysUntil(dateStr: string): number {
 }
 
 export function formatDaysLeft(daysLeft: number, reminderType: string): string {
-  if (daysLeft < 0) {
-    return reminderType === 'expiry' ? `Overdue by ${Math.abs(daysLeft)}d` : `Renewed ${Math.abs(daysLeft)}d ago`
-  }
-  if (daysLeft === 0) return 'Today'
-  return `${daysLeft}d left`
+  if (daysLeft < 0) return `Overdue by ${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? '' : 's'}`
+  if (daysLeft === 0) return 'Due today'
+  return `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`
 }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { daysUntil, formatDaysLeft } from '@/lib/utils/dates'
+import { daysUntil } from '@/lib/utils/dates'
+import { CountdownDigit } from '@/components/CountdownDigit'
 
 const CATEGORY_LABELS: Record<string, string> = {
   passport: 'Passport',
@@ -44,17 +45,21 @@ export default async function ItemsPage() {
                 href={`/items/${item.id}`}
                 className="flex items-center justify-between gap-4 py-4 border-b border-line last:border-0 group"
               >
-                <div className="min-w-0">
-                  <p className="text-text truncate group-hover:text-accent transition-colors">{item.name}</p>
-                  <p className="text-xs text-text-muted mt-0.5">
-                    {CATEGORY_LABELS[item.category] ?? item.category}
-                    {item.importance === 'high' && <span className="text-urgent"> · high priority</span>}
-                  </p>
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="w-16 shrink-0 flex justify-center">
+                    <CountdownDigit daysLeft={daysLeft} size="md" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-text truncate group-hover:text-accent transition-colors">{item.name}</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      {CATEGORY_LABELS[item.category] ?? item.category}
+                      {item.importance === 'high' && <span className="text-urgent"> · high priority</span>}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-sm text-text font-display">{new Date(item.renewal_date).toLocaleDateString()}</p>
-                  <p className="text-xs text-text-muted">{formatDaysLeft(daysLeft, item.reminder_type)}</p>
-                </div>
+                <p className="text-sm text-text font-display shrink-0">
+                  {new Date(item.renewal_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
               </Link>
             )
           })}

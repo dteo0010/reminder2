@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { daysUntil, formatDaysLeft } from '@/lib/utils/dates'
+import { daysUntil } from '@/lib/utils/dates'
 import { formatStageLabel } from '@/lib/utils/notifications'
 import { RenewForm } from '@/components/RenewForm'
 import { DeleteButton } from '@/components/DeleteButton'
+import { CountdownDigit } from '@/components/CountdownDigit'
 
 const CATEGORY_LABELS: Record<string, string> = {
   passport: 'Passport',
@@ -28,7 +29,6 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
     .order('sent_at', { ascending: false })
 
   const daysLeft = daysUntil(item.renewal_date)
-  const colorClass = daysLeft < 0 ? 'text-urgent' : daysLeft <= 7 ? 'text-soon' : daysLeft <= 30 ? 'text-upcoming' : 'text-later'
 
   return (
     <div>
@@ -41,11 +41,10 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
       </div>
 
       <div className="card p-6 mb-6 flex items-center gap-6">
-        <span className={`digit text-5xl ${colorClass}`}>{Math.abs(daysLeft)}</span>
+        <CountdownDigit daysLeft={daysLeft} size="lg" />
         <div>
-          <p className="text-text">{formatDaysLeft(daysLeft, item.reminder_type)}</p>
-          <p className="text-xs text-text-muted mt-1 font-display">
-            {item.reminder_type === 'expiry' ? 'Expires' : 'Renews'} {new Date(item.renewal_date).toLocaleDateString()}
+          <p className="text-xs text-text-muted font-display">
+            {item.reminder_type === 'expiry' ? 'Expires' : 'Renews'} {new Date(item.renewal_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
           {item.importance && <p className="text-xs text-text-muted mt-1">Importance: {item.importance}</p>}
           {item.recurrence && item.recurrence !== 'none' && <p className="text-xs text-text-muted">Recurs: {item.recurrence}</p>}
