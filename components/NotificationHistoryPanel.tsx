@@ -2,13 +2,7 @@
 
 import { useState } from 'react'
 import { formatStageLabel } from '@/lib/utils/notifications'
-
-type HistoryEntry = {
-  id: string
-  stage: number
-  sent_at: string
-  items: { name: string; category: string }[] | null
-}
+import type { HistoryEntry } from '@/lib/data/notifications'
 
 export function NotificationHistoryPanel({ history }: { history: HistoryEntry[] }) {
   const [open, setOpen] = useState(false)
@@ -41,9 +35,9 @@ export function NotificationHistoryPanel({ history }: { history: HistoryEntry[] 
           ) : (
             history.map((h) => (
               <div key={h.id} className="border-b border-line pb-3 last:border-0">
-                <p className="text-sm text-text">{h.items?.[0]?.name ?? 'Item'}</p>
+                <p className="text-sm text-text">{h.items?.name ?? 'Item'}</p>
                 <p className="text-xs text-text-muted mt-0.5 font-display">
-                  {h.items?.[0]?.category ?? ''} · {formatStageLabel(h.stage)} · {new Date(h.sent_at).toLocaleDateString()}
+                  {h.items?.category ?? ''} · {formatStageLabel(h.stage)} · {new Date(h.sent_at).toLocaleDateString()}
                 </p>
               </div>
             ))
