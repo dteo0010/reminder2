@@ -17,6 +17,7 @@ type Item = {
   renewal_date: string
   lead_days: number[] | null
   importance: 'low' | 'normal' | 'high' | null
+  recurrence: string | null
   status: string
 }
 
@@ -43,6 +44,12 @@ function overdueStage(daysLeft: number, importance: string): number {
   return -(periods * interval)
 }
 
+function advanceDate(dateStr: string, recurrence: string): string {
+  const date = new Date(dateStr)
+  if (recurrence === 'monthly') date.setMonth(date.getMonth() + 1)
+  else if (recurrence === 'annual') date.setFullYear(date.getFullYear() + 1)
+  return date.toISOString().split('T')[0]
+}
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
@@ -57,6 +64,19 @@ export async function GET(request: Request) {
   const dueByUser = new Map<string, { item: Item; daysLeft: number; matchedStage: number; effectiveImportance: string }[]>()
 
   for (const item of (items as Item[])) {
+
+        if (
+      item.reminder_type === 'renewal' &&
+      item.recurrence &&
+      item.recurrence !== 'none' &&
+      daysUntil(item.renewal_date) < 0
+    ) {
+      const newDate = advanceDate(item.renewal_date, item.recurrence)
+      await supabase.from('items').update({ renewal_date: newDate }).eq('id', item.id)
+      await supabase.from('notification_log').delete().eq('item_id', item.id)
+      item.renewal_date = newDate
+    }
+    
     const rule = ruleMap.get(item.category)!
     const leadDays = item.lead_days ?? rule.default_lead_days
     const effectiveImportance = item.importance ?? rule.default_importance
@@ -78,7 +98,7 @@ export async function GET(request: Request) {
       const candidates = stages.filter((s) => daysLeft <= s).sort((a, b) => a - b)
       matchedStage = candidates.find((s) => !loggedSet.has(s))
     }
-    
+
     if (matchedStage === undefined) continue
 
     if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])

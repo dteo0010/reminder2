@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { updateItem } from '@/lib/actions/items'
 
 type Item = {
@@ -23,6 +24,8 @@ const CATEGORIES = [
 
 export function EditItemForm({ item }: { item: Item }) {
   const updateItemWithId = updateItem.bind(null, item.id)
+  const [reminderType, setReminderType] = useState(item.reminder_type)
+  const isRenewalType = reminderType === 'renewal'
 
   return (
     <form action={updateItemWithId} className="space-y-5">
@@ -47,7 +50,13 @@ export function EditItemForm({ item }: { item: Item }) {
 
       <div>
         <label htmlFor="reminder_type" className="field-label">Reminder type</label>
-        <select id="reminder_type" name="reminder_type" defaultValue={item.reminder_type} className="field">
+        <select
+          id="reminder_type"
+          name="reminder_type"
+          value={reminderType}
+          onChange={(e) => setReminderType(e.target.value)}
+          className="field"
+        >
           <option value="expiry">Expiry — invalid after this date</option>
           <option value="renewal">Renewal — auto-renews on this date</option>
         </select>
@@ -75,14 +84,17 @@ export function EditItemForm({ item }: { item: Item }) {
         />
       </div>
 
-      <div>
-        <label htmlFor="recurrence" className="field-label">Recurrence</label>
-        <select id="recurrence" name="recurrence" defaultValue={item.recurrence ?? 'none'} className="field">
-          <option value="none">None</option>
-          <option value="monthly">Monthly</option>
-          <option value="annual">Annual</option>
-        </select>
-      </div>
+      {isRenewalType && (
+        <div>
+          <label htmlFor="recurrence" className="field-label">Recurrence</label>
+          <select id="recurrence" name="recurrence" defaultValue={item.recurrence ?? 'none'} className="field">
+            <option value="none">None — I'll mark it renewed manually</option>
+            <option value="monthly">Monthly — auto-advance the date when overdue</option>
+            <option value="annual">Annual — auto-advance the date when overdue</option>
+          </select>
+          <p className="text-xs text-text-muted mt-1">Only applies to renewal-type items — expired documents can't auto-renew.</p>
+        </div>
+      )}
 
       <button type="submit" className="btn btn-primary w-full justify-center">Save changes</button>
     </form>

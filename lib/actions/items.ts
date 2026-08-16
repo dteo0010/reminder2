@@ -25,6 +25,7 @@ export async function addItem(formData: FormData) {
   const leadDaysRaw = formData.get('lead_days') as string
 
   const reminder_type = reminderTypeOverride || CATEGORY_REMINDER_TYPE[category] || 'expiry'
+  const safeRecurrence = reminder_type === 'renewal' ? (recurrence || 'none') : 'none'
 
   const lead_days = leadDaysRaw
     ? leadDaysRaw.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
@@ -38,7 +39,7 @@ export async function addItem(formData: FormData) {
     renewal_date,
     lead_days: lead_days && lead_days.length > 0 ? lead_days : null,
     importance: importance || null,
-    recurrence: recurrence || 'none',
+    recurrence: safeRecurrence,
   })
 
   if (error) {

@@ -11,8 +11,21 @@ const CATEGORIES = [
   { value: 'subscription', label: 'Subscription' },
 ]
 
+const CATEGORY_REMINDER_TYPE: Record<string, 'expiry' | 'renewal'> = {
+  passport: 'expiry',
+  licence: 'expiry',
+  insurance: 'expiry',
+  road_tax: 'expiry',
+  subscription: 'renewal',
+}
+
 export function AddItemForm() {
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [category, setCategory] = useState('')
+  const [reminderTypeOverride, setReminderTypeOverride] = useState('')
+
+  const effectiveType = reminderTypeOverride || CATEGORY_REMINDER_TYPE[category] || 'expiry'
+  const isRenewalType = effectiveType === 'renewal'
 
   return (
     <form action={addItem} className="space-y-5">
@@ -23,7 +36,14 @@ export function AddItemForm() {
 
       <div>
         <label htmlFor="category" className="field-label">Category</label>
-        <select id="category" name="category" required defaultValue="" className="field">
+        <select
+          id="category"
+          name="category"
+          required
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="field"
+        >
           <option value="" disabled>Select a category</option>
           {CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>{c.label}</option>
@@ -48,7 +68,13 @@ export function AddItemForm() {
         <div className="space-y-5 pt-5 border-t border-line">
           <div>
             <label htmlFor="reminder_type" className="field-label">Reminder type</label>
-            <select id="reminder_type" name="reminder_type" defaultValue="" className="field">
+            <select
+              id="reminder_type"
+              name="reminder_type"
+              value={reminderTypeOverride}
+              onChange={(e) => setReminderTypeOverride(e.target.value)}
+              className="field"
+            >
               <option value="">Use category default</option>
               <option value="expiry">Expiry — invalid after this date</option>
               <option value="renewal">Renewal — auto-renews on this date</option>
@@ -70,14 +96,17 @@ export function AddItemForm() {
             <input id="lead_days" name="lead_days" type="text" placeholder="e.g. 30, 7, 1" className="field" />
           </div>
 
-          <div>
-            <label htmlFor="recurrence" className="field-label">Recurrence</label>
-            <select id="recurrence" name="recurrence" defaultValue="none" className="field">
-              <option value="none">None</option>
-              <option value="monthly">Monthly</option>
-              <option value="annual">Annual</option>
-            </select>
-          </div>
+          {isRenewalType && (
+            <div>
+              <label htmlFor="recurrence" className="field-label">Recurrence</label>
+              <select id="recurrence" name="recurrence" defaultValue="none" className="field">
+                <option value="none">None — I'll mark it renewed manually</option>
+                <option value="monthly">Monthly — auto-advance the date when overdue</option>
+                <option value="annual">Annual — auto-advance the date when overdue</option>
+              </select>
+              <p className="text-xs text-text-muted mt-1">Only applies to renewal-type items — expired documents can't auto-renew.</p>
+            </div>
+          )}
         </div>
       )}
 
