@@ -10,6 +10,7 @@ export async function NavBar() {
   if (!user) return null
 
   const history = await getNotificationHistory()
+   console.log(JSON.stringify(history, null, 2))
 
   return (
     <header className="border-b border-line">
