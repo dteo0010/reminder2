@@ -37,9 +37,10 @@ function effectiveStages(leadDays: number[], importance: string): number[] {
 }
 
 // --- overdue re-notify bucket: weekly cadence instead of "once, ever" ---
-function overdueStage(daysLeft: number): number {
-  const weeksOverdue = Math.floor(Math.abs(daysLeft) / 7)
-  return -(weeksOverdue * 7) // 0, -7, -14, ... each week gets one notify
+function overdueStage(daysLeft: number, importance: string): number {
+  const interval = importance === 'high' ? 3 : 7
+  const periods = Math.floor(Math.abs(daysLeft) / interval)
+  return -(periods * interval)
 }
 
 
@@ -71,13 +72,13 @@ export async function GET(request: Request) {
     let matchedStage: number | undefined
 
     if (daysLeft < 0) {
-      const stage = overdueStage(daysLeft)
+      const stage = overdueStage(daysLeft, effectiveImportance)
       if (!loggedSet.has(stage)) matchedStage = stage
     } else {
       const candidates = stages.filter((s) => daysLeft <= s).sort((a, b) => a - b)
       matchedStage = candidates.find((s) => !loggedSet.has(s))
     }
-
+    
     if (matchedStage === undefined) continue
 
     if (!dueByUser.has(item.user_id)) dueByUser.set(item.user_id, [])

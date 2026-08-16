@@ -15,7 +15,7 @@ export async function NavBar() {
     <header className="border-b border-line">
       <div className="mx-auto max-w-3xl px-4 py-4 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <span className="font-display text-sm tracking-widest text-accent">RENEWALS</span>
+          <span className="font-display text-sm tracking-widest text-accent">REMINDER</span>
           <nav className="flex items-center gap-5 text-sm">
             <Link href="/" className="text-text-muted hover:text-text transition-colors">Coming up</Link>
             <Link href="/items" className="text-text-muted hover:text-text transition-colors">All items</Link>
